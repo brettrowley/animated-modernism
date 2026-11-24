@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Modernism in Motion</title>
+  <meta name="description" content="Modernist paintings recreated and animated by Claude, guided by a rulebook that grew with every correction.">
+  <link rel="icon" href="favicon.ico" sizes="32x32">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+  <link rel="stylesheet" href="site/gallery.css">
+</head>
+<body>
+  <main class="gallery" tabindex="-1" aria-label="Gallery">
+    <div class="track">
+      <section class="intro is-centred" aria-labelledby="title">
+        <h1 id="title"><b>Modernism</b> in <b>Motion</b></h1>
+        <p class="lede">The geometric paintings of modernists like László Moholy-Nagy, Kazimir Malevich and Josef Albers lend themselves naturally to digital design tools.</p>
+        <p>Claude learned to recreate and animate a collection of paintings, each in a style further from the last. Under the direction of Brett Rowley, corrections and adjustments to the animations were recorded in a <a href="#" class="rulebook-link" data-rulebook>Rulebook</a>, a document that provides definitions, instructions and examples to guide the next animation.</p>
+        <p>The initial painting took over a dozen rounds of iteration to finish, despite its relatively simple construction. With the help of an expanded Rulebook, the final and most complex painting needed only 3 minor adjustments.</p>
+        <p class="cue">
+          <button type="button" class="next">View the gallery <span aria-hidden="true">→</span></button>
+        </p>
+      </section>
+      <!-- Paintings are added here by site/gallery.js. -->
+    </div>
+  </main>
+
+  <!-- Styled after an emergency exit sign. Shown once you're past the first
+       painting, by site/gallery.js. -->
+  <button type="button" class="restart exit-sign" inert>
+    <svg viewBox="0 0 44 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 12H1.5M5 8.5 1.5 12 5 15.5" stroke-width="2"/>
+      <path d="M13 3.5h9v18h-9" stroke-width="1.6"/>
+      <circle cx="31" cy="4.2" r="2.2" fill="currentColor" stroke="none"/>
+      <path d="M31.5 8 34 14M32 9.5l-5 2M32.5 9.5l4.5-1.5 2 2.5M34 14l-4.5 3-3 4.5M34 14l3.5 3.5L40 21" stroke-width="2.2"/>
+    </svg>
+    <span>Restart</span>
+  </button>
+
+  <!-- A painting brought close: filled in by site/focus.js. -->
+  <section class="focus" aria-label="Painting" hidden>
+    <button type="button" class="back exit-sign">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 12H3.5M7.5 7.5 3 12l4.5 4.5" stroke-width="2.2"/><path d="M12 4h8v16h-8" stroke-width="1.8"/>
+      </svg>
+      <span>Gallery</span>
+    </button>
+    <div class="focus-inner">
+      <figure class="focus-art">
+        <div class="frame focus-frame"></div>
+        <figcaption class="caption"></figcaption>
+      </figure>
+      <div class="details"></div>
+    </div>
+  </section>
+
+  <!-- The Rulebook as a museum guide, on the floor: site/rulebook.js. -->
+  <section class="guide" aria-label="The Rulebook" hidden>
+    <div class="guide-floor">
+      <article class="sheet" aria-labelledby="sheet-title">
+        <header class="sheet-head">
+          <div>
+            <h2 id="sheet-title">The Rulebook</h2>
+            <p class="byline">Directed and curated by Brett Rowley. Written and managed by Claude.</p>
+          </div>
+          <button type="button" class="sheet-close" aria-label="Close the Rulebook">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square"><path d="M4 4l16 16M20 4 4 20"/></svg>
+          </button>
+        </header>
+        <nav class="sheet-nav" aria-label="Rulebook sections"></nav>
+        <div class="sheet-page" tabindex="-1"></div>
+      </article>
+    </div>
+  </section>
+
+  <noscript><p class="noscript">The paintings need JavaScript to draw themselves.</p></noscript>
+
+  <script type="module" src="site/gallery.js"></script>
+</body>
+</html>

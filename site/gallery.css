@@ -1,0 +1,1073 @@
+/* The gallery: a wall of paintings that scrolls sideways, each under its own
+   picture light, above a strip of floor. Everything is flat geometry, like the
+   paintings; grain is the one texture, on the lights and the floor. */
+
+:root {
+  --wall-top: #F3E6D8;
+  --wall: #F0E1D2;
+  --wall-low: #EAD8C7;
+  --floor: #938A8A;
+  --floor-edge: #7E7575;
+  --ink: #1C1A18;
+  --muted: #5F5852;
+  --lamp: #D2C4B1;
+  --light: 247 222 160;      /* the picture light, as r g b */
+  --placard: #E7D7C6;
+  --exit: #0A7F45;      /* safety green, as on an exit sign */
+  --accent: #B2452C;    /* the playhead's red, and the guide's current section */
+  --pink: #FF2D87;
+  --serif: 'Source Serif 4', Georgia, serif;
+  --frame: #0E0D0C;
+
+  /* How strong the grain is: 0 turns it off. */
+  --grain: 0.18;
+
+  --intro-w: min(680px, calc(100vw - 32px));
+
+  --floor-h: clamp(48px, 17dvh, 190px);
+  --wall-h: calc(100dvh - var(--floor-h));
+  /* Every painting hangs at the same height; their widths follow their own
+     proportions. */
+  --art-h: clamp(140px, 40dvh, 440px);
+  --frame-w: max(4px, calc(var(--art-h) * 0.04));
+
+  /* Speckled noise, tiled: the grain of a risograph print. */
+  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.1 0 0 0 0 0.08 0 0 0 0 0.06 2.4 0 0 0 -1.15'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  color: var(--ink);
+  font: 400 15px/1.5 Jost, 'Futura', 'Avenir Next', system-ui, sans-serif;
+  /* The wall: a very slight fall-off from top to bottom gives it depth. */
+  background:
+    linear-gradient(to bottom, var(--wall-top), var(--wall) 55%, var(--wall-low));
+}
+
+/* ------------------------------------------------------------------------- */
+/* The scrolling wall */
+
+.gallery {
+  height: 100dvh;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  outline: none;
+}
+.gallery::-webkit-scrollbar { display: none; }
+
+.track {
+  position: relative;
+  display: flex;
+  width: max-content;
+  height: 100%;
+  overflow: clip; /* the floor sliding away mustn't make the wall scroll */
+  /* Room before the introduction: half what would centre it, so it sits a
+     little left of the middle. The gaps between paintings, and the room after
+     the last, are set by site/gallery.js. */
+  padding-left: max(16px, calc((100vw - var(--intro-w)) / 4));
+}
+
+/* The floor: grey-washed planks running along the wall, narrowing into the
+   distance, drawn by site/gallery.js with the woodcut's grain generator. It
+   scrolls with the wall, so the boards move with you. */
+.floor {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: var(--floor-h);
+  background: var(--floor);
+  border-top: 2px solid var(--floor-edge);
+  overflow: hidden;
+  pointer-events: none;
+}
+.floor svg {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+.floor::after {
+  /* Riso speckle over the boards, and the shadow where floor meets wall. */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(to bottom, rgb(40 30 30 / 0.22), transparent 22%), var(--noise);
+  opacity: calc(0.15 + var(--grain) * 1.4);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Introduction */
+
+.intro {
+  flex: none;
+  width: var(--intro-w);
+  height: var(--wall-h);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  scroll-snap-align: center;
+  transition: opacity 0.5s ease;
+}
+.intro:not(.is-centred) { opacity: 0.25; }
+
+.intro h1 {
+  margin: 0 0 0.55em;
+  font-size: clamp(40px, 5vw, 84px);
+  font-weight: 300;
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+}
+.intro h1 b { font-weight: 600; }
+
+.intro p {
+  margin: 0 0 0.9em;
+  font-size: clamp(15px, 1.2vw, 19px);
+  color: var(--muted);
+  max-width: 40em;
+  /* No word left alone on a last line. */
+  text-wrap: pretty;
+}
+.intro .lede {
+  font-size: clamp(18px, 1.55vw, 24px);
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.intro .cue { margin-top: 0.6em; }
+.next {
+  font: inherit;
+  font-weight: 500;
+  font-size: clamp(15px, 1.2vw, 19px);
+  color: var(--ink);
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.next span {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+.next:hover span, .next:focus-visible span { transform: translateX(4px); }
+
+/* ------------------------------------------------------------------------- */
+/* A painting and its light */
+
+.bay {
+  flex: none;
+  position: relative;
+  margin: 0; /* a <figure>'s default margins would widen every gap */
+  height: var(--wall-h);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  scroll-snap-align: center;
+}
+
+.hang {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Room for the light above the painting. */
+  padding-top: calc(var(--art-h) * 0.62);
+  margin-top: calc(var(--art-h) * -0.2);
+}
+
+/* The light: a dome on the wall, and a cone of light falling from it. */
+.lamp {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: calc(var(--art-h) * 1.15);
+  height: calc(var(--art-h) * 0.78);
+  translate: -50% 0;
+  pointer-events: none;
+}
+.lamp .cone,
+.lamp .cone-grain {
+  /* The cone of light, faded out downwards, and its grain. */
+  position: absolute;
+  inset: calc(var(--art-h) * 0.15) 0 0 0;
+  clip-path: polygon(39% 0, 61% 0, 100% 100%, 0 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 10%, rgb(0 0 0 / 0.5) 55%, transparent 92%);
+  mask-image: linear-gradient(to bottom, #000 10%, rgb(0 0 0 / 0.5) 55%, transparent 92%);
+}
+.lamp .cone { background: rgb(var(--light) / 0.8); }
+.lamp .cone-grain {
+  background-image: var(--noise);
+  opacity: calc(var(--grain) * 1.6);
+}
+.lamp::after {
+  /* The dome. */
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: calc(var(--art-h) * 0.3);
+  height: calc(var(--art-h) * 0.16);
+  translate: -50% 0;
+  border-radius: 999px 999px 0 0;
+  background: var(--lamp);
+}
+
+.frame {
+  position: relative;
+  display: block;
+  padding: var(--frame-w);
+  background: var(--frame);
+  box-shadow:
+    0 calc(var(--art-h) * 0.02) calc(var(--art-h) * 0.05) rgb(60 40 20 / 0.20),
+    0 1px 2px rgb(60 40 20 / 0.25);
+  transition: translate 0.25s ease, box-shadow 0.25s ease;
+}
+/* Only the painting in the middle lifts: the others are a step away. */
+.frame.is-centred:hover, .frame:focus-visible {
+  translate: 0 -2px;
+  box-shadow:
+    0 calc(var(--art-h) * 0.04) calc(var(--art-h) * 0.09) rgb(60 40 20 / 0.24),
+    0 1px 2px rgb(60 40 20 / 0.25);
+}
+.frame:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 4px;
+}
+
+.frame svg {
+  display: block;
+  width: min(calc(var(--art-h) * var(--ar)), calc(100vw - 72px));
+  height: auto;
+  aspect-ratio: var(--ar);
+}
+
+/* Glass blending, as in the player: each <use> composites against what's
+   drawn before it inside the painting's own <svg>. */
+.frame svg .transmit { mix-blend-mode: multiply; }
+.frame svg .emit { mix-blend-mode: screen; }
+
+/* The wall label, beside the frame's lower right corner: a small card whose
+   "text" is three ruled lines. */
+.placard {
+  position: absolute;
+  left: calc(100% + var(--art-h) * 0.05);
+  bottom: 0;
+  width: calc(var(--art-h) * 0.12);
+  aspect-ratio: 1;
+  padding: calc(var(--art-h) * 0.02);
+  background: var(--placard);
+  box-shadow: 0 1px 2px rgb(60 40 20 / 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--art-h) * 0.014);
+}
+.placard i {
+  display: block;
+  height: max(1px, calc(var(--art-h) * 0.008));
+  background: rgb(28 26 24 / 0.22);
+}
+.placard i:first-child { background: rgb(28 26 24 / 0.38); }
+
+/* Replay: quiet until you look for it. */
+/* Under each painting: Replay and Inspect, the way in to its close-up.
+   Both stay quiet until you look for them. */
+.actions {
+  margin-top: calc(var(--art-h) * 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.replay,
+.inspect {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.45;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+.replay svg,
+.inspect svg { width: 13px; height: 13px; }
+.bay:hover :is(.replay, .inspect),
+:is(.replay, .inspect):focus-visible { opacity: 1; color: var(--ink); }
+:is(.replay, .inspect):focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+@media (hover: none) {
+  .replay, .inspect { opacity: 0.75; }
+}
+
+.noscript {
+  position: fixed;
+  inset: auto 0 calc(var(--floor-h) + 16px);
+  text-align: center;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame, .next span, .replay { transition: none; }
+}
+
+/* On a phone the painting fills the width, leaving no wall beside it for the
+   label. */
+@media (max-width: 520px) {
+  .placard { display: none; }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Signs styled after an emergency exit sign: safety green, a white border,
+   a white pictogram and an arrow pointing back the way you came. Restart
+   (on the wall) and Gallery (close up) share it. */
+
+.exit-sign {
+  position: fixed;
+  top: clamp(12px, 2.2vh, 24px);
+  left: clamp(12px, 2vw, 28px);
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px 7px 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #FFF;
+  background: var(--exit);
+  border: 0;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.85), 0 2px 6px rgb(30 40 30 / 0.18);
+  cursor: pointer;
+  transition: opacity 0.35s ease, translate 0.35s ease, filter 0.2s ease;
+}
+.exit-sign:hover { filter: brightness(1.12); }
+.exit-sign:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+.restart svg { width: 40px; height: 22px; }
+.restart:not(.is-shown) {
+  opacity: 0;
+  translate: 0 -6px;
+  pointer-events: none;
+}
+
+.back svg { width: 22px; height: 22px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .exit-sign { transition: none; }
+}
+
+/* ------------------------------------------------------------------------- */
+/* The focused view */
+
+/* The wall steps back: the paintings fade and the floor slides away. */
+.bay, .intro {
+  transition: opacity 0.5s ease;
+}
+.floor { transition: translate 0.7s cubic-bezier(0.65, 0, 0.35, 1); }
+body.is-focused .bay,
+body.is-focused .intro { opacity: 0; }
+body.is-focused .floor { translate: 0 100%; }
+body.is-focused .gallery { overflow: hidden; }
+
+.focus {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Recomputed from this view's painting height, so the frame keeps its
+     proportions close up and flies without changing weight. */
+  --frame-w: max(4px, calc(var(--art-h) * 0.04));
+  --chip: #D6CCBB;
+  --lane: #C9BCAD;
+  --bar: #4A4340;
+}
+
+.focus-inner {
+  width: var(--column, 640px);
+  max-width: calc(100vw - 32px);
+  margin: 0 auto;
+  padding: clamp(64px, 9vh, 96px) 0 96px;
+}
+
+.focus-art {
+  width: fit-content;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.focus-frame {
+  transform-origin: 0 0;
+}
+.focus-frame,
+.focus-frame:hover {
+  translate: none;
+}
+.focus .frame svg { width: calc(var(--art-h) * var(--ar)); }
+
+/* What arrives with the painting fades in once it's close. */
+.focus .back,
+.caption,
+.details {
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.focus.is-open .back,
+.focus.is-open .caption,
+.focus.is-open .details {
+  opacity: 1;
+  transition: opacity 0.5s ease 0.55s;
+}
+
+.caption {
+  align-self: stretch;
+  /* As wide as the frame, never wider: a long title wraps under it. */
+  width: 0;
+  min-width: 100%;
+  text-wrap: balance;
+  line-height: 1.4;
+  margin-top: 14px;
+  text-align: right;
+  font-size: 15px;
+  color: var(--ink);
+}
+.caption b { font-weight: 600; }
+
+.details {
+  margin-top: clamp(40px, 7vh, 72px);
+  font-size: 15px;
+}
+
+.details .row,
+.family {
+  display: grid;
+  /* The name and its badge, then the lane: wider now the motion is a badge. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  grid-template-rows: 44px auto;
+  align-items: center;
+  column-gap: 18px;
+}
+.family { grid-template-rows: auto auto; }
+
+.details .label {
+  font-weight: 600;
+  font-size: 17px;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+/* Duration and reset */
+.lengths {
+  align-self: stretch;
+  padding: 6px 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+.details button {
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--chip);
+  border: 1px solid transparent;
+  border-radius: 0;
+  padding: 0 10px;
+  cursor: pointer;
+}
+.lengths button[aria-checked='true'] { border-color: var(--ink); background: #CBBFAD; font-weight: 600; }
+.reset-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+.details .reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 8px 11px;
+  border: 1px solid rgb(28 26 24 / 0.3);
+}
+.reset svg { width: 16px; height: 16px; pointer-events: none; }
+.details .reset:not([disabled]):hover { border-color: var(--ink); background: #CBBFAD; }
+.reset[disabled] { opacity: 0.4; cursor: default; }
+.details button:focus-visible,
+.handle:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* Play, clock and the master slider */
+.transport {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  align-self: stretch;
+  padding: 6px 0;
+}
+/* Round, like the badges beside it, and big enough to be the main control. */
+.details .play {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 50px;
+  height: 50px;
+  padding: 0;
+  border-radius: 50%;
+}
+.play svg { width: 20px; height: 20px; pointer-events: none; }
+.details .play:hover { background: #CBBFAD; }
+.details .scrub-row { grid-template-rows: auto; padding: 4px 0; }
+.clock {
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Lanes. The master lane scrubs through the animation, and a thin playhead
+   runs from it down through every row. Each row's bars are the motions
+   themselves: drag a bar to move it, or a grip at either end to change when
+   it starts or ends. */
+.board { position: relative; }
+
+.lane {
+  position: relative;
+  height: 8px;
+  background: var(--lane);
+}
+.lane[data-master] {
+  height: 12px;
+  background: #BCAE9E;
+  cursor: ew-resize;
+  touch-action: none;
+}
+.handle {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--p, 1) * 100%);
+  width: 12px;
+  height: 26px;
+  translate: -50% -50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--wall);
+  cursor: grab;
+}
+.lane.is-dragging .handle { cursor: grabbing; }
+
+.playhead {
+  position: absolute;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--accent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* A row of several shapes gives each its own lane. A big family starts
+   collapsed into a single bar, and expands to show every shape. */
+.timeline .lane {
+  --bh: 14px;   /* bar height */
+  --gap: 10px;  /* between a family's lanes */
+  height: calc(var(--n, 1) * var(--bh) + (var(--n, 1) - 1) * var(--gap));
+  margin: 12px 0;
+  background: repeating-linear-gradient(to bottom, var(--lane) 0 var(--bh), transparent var(--bh) calc(var(--bh) + var(--gap)));
+}
+.family.is-collapsed .member-lane,
+.family:not(.is-collapsed) .group-lane { display: none; }
+
+/* The family bar: ticks mark where each of its shapes starts. */
+.bar.group { background: var(--bar); }
+.ticks { position: absolute; inset: 0; overflow: hidden; }
+.ticks i {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  width: 1.5px;
+  background: var(--wall);
+  opacity: 0.55;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.details .expand {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 10px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  line-height: 1.3;
+  background: none;
+  border: 1px solid rgb(28 26 24 / 0.25);
+  color: var(--muted);
+}
+.expand svg { width: 11px; height: 11px; transition: rotate 0.2s ease; }
+.expand[aria-expanded='true'] svg { rotate: 180deg; }
+.details .expand:hover { color: var(--ink); border-color: var(--ink); }
+.bar {
+  position: absolute;
+  top: calc(var(--k, 0) * (var(--bh) + var(--gap)));
+  height: var(--bh);
+  background: var(--bar);
+}
+.bar.is-edited { background: var(--ink); }
+.bar.is-fixed { opacity: 0.6; }
+/* The grips at each end: always shown, and wider to grab than they look. */
+.grip {
+  position: absolute;
+  top: 50%;
+  width: 9px;
+  height: calc(var(--bh) + 10px);
+  translate: 0 -50%;
+  background: var(--ink);
+  border: 2px solid var(--wall);
+  cursor: ew-resize;
+  touch-action: none;
+}
+.grip::before {
+  content: '';
+  position: absolute;
+  inset: -6px -8px;
+}
+.grip[data-edge='start'] { left: -4px; }
+.grip[data-edge='end'] { right: -4px; }
+.grip:hover, .grip.is-dragging { background: var(--accent); }
+
+.timeline { margin-top: 14px; }
+.family { border-top: 1px solid rgb(28 26 24 / 0.08); }
+
+.head {
+  display: grid;
+  justify-items: start;
+  align-self: start;
+  row-gap: 5px;
+  padding: 12px 0;
+  min-width: 0;
+}
+.name {
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+/* The motion, as a badge on the shape's name; it opens the reason. */
+.details .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px 3px 10px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  line-height: 1.3;
+  white-space: nowrap;
+  background: var(--chip);
+}
+.badge svg { width: 13px; height: 13px; opacity: 0.6; }
+.badge:hover svg, .badge[aria-expanded='true'] svg { opacity: 1; }
+.badge[aria-expanded='true'] { background: var(--ink); color: var(--wall); }
+
+/* The target badge: a toggle that shows the row's shapes on the painting. */
+.details .target {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 25px;
+  padding: 0;
+  border-radius: 999px;
+  background: var(--chip);
+  color: var(--muted);
+}
+.target svg { width: 16px; height: 16px; }
+.details .target:hover { color: var(--ink); }
+.details .target[aria-pressed='true'] { background: var(--pink); color: #FFF; }
+
+/* The reason opens downwards from its row, pushing the rest down. */
+.why {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s cubic-bezier(0.65, 0, 0.35, 1);
+}
+.why > div { overflow: hidden; }
+.family.is-open .why { grid-template-rows: 1fr; }
+.why p {
+  margin: 0 0 14px;
+  font-family: var(--serif);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.why .cites {
+  white-space: nowrap;
+  font-style: italic;
+}
+
+.pending {
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.rules {
+  margin-top: clamp(40px, 7vh, 72px);
+  padding: 20px 22px 18px;
+  background: var(--chip);
+}
+.rules h2 {
+  margin: 0 0 14px;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.rules ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 14px;
+}
+.rules li {
+  display: grid;
+  grid-template-columns: 3em 1fr;
+  row-gap: 2px;
+}
+.rules .n {
+  grid-row: 1 / 3;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.rules .rule {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+/* Where to look: the Rulebook's voice, in its serif. */
+.rules .where {
+  font-family: var(--serif);
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.rules .note {
+  margin: 16px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid rgb(28 26 24 / 0.12);
+  font-family: var(--serif);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* The target's shapes, in pink; nothing else changes. */
+.focus svg .plane.is-lit use:not([fill='none']) { fill: var(--pink); mix-blend-mode: normal; }
+.focus svg .plane.is-lit use[fill='none'] { stroke: var(--pink); mix-blend-mode: normal; }
+.focus svg use.line.is-lit { stroke: var(--pink); stroke-width: 2.5; }
+
+/* Side by side: the painting holds still while the timeline beside it
+   scrolls, so hovering any row lights its shapes in view. */
+@media (min-width: 1100px) {
+  .focus-inner {
+    width: min(1440px, calc(100vw - 64px));
+    max-width: none;
+    display: grid;
+    grid-template-columns: auto minmax(400px, 560px);
+    justify-content: center;
+    align-items: start;
+    column-gap: clamp(40px, 5vw, 96px);
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .focus-art {
+    position: sticky;
+    top: 0;
+    min-height: 100dvh;
+    justify-content: center;
+    margin: 0;
+  }
+  .details {
+    margin-top: 0;
+    padding: max(72px, calc((100dvh - var(--art-h)) / 2)) 0 72px;
+  }
+}
+
+@media (max-width: 560px) {
+  .details .row,
+  .family {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    row-gap: 8px;
+    padding: 8px 0;
+  }
+  .lengths, .transport { padding: 0; min-height: 36px; }
+  /* On a phone the sign would sit over the text as it scrolls; it scrolls
+     away with the painting instead. */
+  .focus .back { position: absolute; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bay, .intro, .floor, .focus .back, .caption, .details, .why { transition: none !important; }
+}
+
+/* ------------------------------------------------------------------------- */
+/* The Rulebook: a printed guide on the floor. Opening it, the visitor looks
+   down: the floor rises to fill the view, a strip of wall left at the top,
+   and a sheet comes up with it. */
+
+.rulebook-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.rulebook-link:hover { color: var(--ink); }
+
+.read-rulebook {
+  display: inline-block;
+  margin-top: 14px;
+  font-family: Jost, 'Futura', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+}
+.read-rulebook span { display: inline-block; transition: translate 0.2s ease; }
+.read-rulebook:hover span { translate: 4px 0; }
+
+.guide {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  overflow: clip; /* never scrolls, even when something inside asks it to */
+  --paper: #D3CAB8;
+}
+.guide-floor {
+  position: absolute;
+  inset: var(--horizon, 11dvh) 0 0;
+  background: var(--floor);
+  border-top: 2px solid var(--floor-edge);
+  box-shadow: 0 -10px 30px rgb(40 30 30 / 0.12);
+}
+.guide-grain { position: absolute; top: 0; left: 0; }
+.guide-floor::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--noise);
+  opacity: calc(0.15 + var(--grain) * 1.4);
+  pointer-events: none;
+}
+
+/* The sheet: paper with the riso grain, a little shadow where it lies. */
+.sheet {
+  position: absolute;
+  z-index: 1;
+  top: clamp(24px, 6dvh, 72px);
+  left: 50%;
+  translate: -50% 0;
+  width: min(1100px, calc(100vw - 32px));
+  bottom: 0;
+  display: grid;
+  grid-template-columns: minmax(150px, 230px) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  background: var(--paper);
+  box-shadow: 0 2px 0 rgb(0 0 0 / 0.06), 0 18px 40px rgb(30 20 20 / 0.28);
+  color: var(--ink);
+}
+.sheet-head {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: clamp(24px, 4vw, 48px) clamp(20px, 4vw, 56px) clamp(16px, 2.5vw, 28px);
+}
+.sheet-head h2 {
+  margin: 0;
+  font-size: clamp(36px, 5vw, 68px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.byline {
+  margin: 12px 0 0;
+  font-size: clamp(14px, 1.3vw, 17px);
+  color: var(--muted);
+}
+
+.sheet-close {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  margin: -4px -6px 0 0;
+  display: grid;
+  place-items: center;
+  color: #8A8279;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.sheet-close svg { width: 38px; height: 38px; }
+.sheet-close:hover { color: var(--ink); }
+.sheet-close:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* The paper's grain, lighter than the floor's. */
+.sheet::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--noise);
+  opacity: calc(var(--grain) * 0.9);
+  pointer-events: none;
+}
+.sheet > * { position: relative; }
+
+/* Sections down the left, a rule between them and the page. */
+.sheet-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 0 32px clamp(20px, 4vw, 56px);
+  border-right: 1.5px solid rgb(28 26 24 / 0.2);
+  overflow-y: auto;
+}
+.sheet-nav button {
+  position: relative;
+  text-align: left;
+  font: inherit;
+  font-size: 17px;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  padding: 8px 12px 8px 14px;
+  margin-left: -14px;
+  cursor: pointer;
+}
+.sheet-nav button:hover { color: var(--accent); }
+.sheet-nav button[aria-current='true'] { color: var(--accent); font-weight: 600; }
+.sheet-nav button[aria-current='true']::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 4px;
+  background: var(--accent);
+}
+.sheet-nav button:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+
+/* The page: the Rulebook's own words, in its serif. */
+.sheet-page {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 clamp(20px, 4vw, 56px) 64px clamp(20px, 3vw, 40px);
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 16px;
+  line-height: 1.6;
+  outline: none;
+}
+.sheet-page > :first-child { margin-top: 4px; }
+.sheet-page p, .sheet-page li { max-width: 44em; }
+.sheet-page h3 {
+  margin: 28px 0 8px;
+  font-family: Jost, 'Futura', system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sheet-page code {
+  font-size: 0.9em;
+  padding: 0 3px;
+  background: rgb(28 26 24 / 0.06);
+}
+.sheet-page table {
+  width: 100%;
+  margin: 12px 0 20px;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.sheet-page th, .sheet-page td {
+  text-align: left;
+  vertical-align: top;
+  padding: 8px 10px 8px 0;
+  border-bottom: 1px solid rgb(28 26 24 / 0.14);
+}
+.sheet-page th { font-family: Jost, 'Futura', system-ui, sans-serif; font-weight: 600; }
+.sheet-page .ref {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid rgb(178 69 44 / 0.35);
+}
+.sheet-page .ref:hover { border-bottom-color: var(--accent); }
+
+/* Each numbered rule: its number and title, folding out to the rest. */
+.entry { border-bottom: 1px solid rgb(28 26 24 / 0.12); }
+.entry summary {
+  display: grid;
+  grid-template-columns: 3.2em 1fr auto;
+  align-items: baseline;
+  gap: 6px;
+  padding: 12px 0;
+  font-size: 18px;
+  line-height: 1.35;
+  cursor: pointer;
+  list-style: none;
+}
+.entry summary::-webkit-details-marker { display: none; }
+.entry summary::after {
+  content: '+';
+  font-family: Jost, 'Futura', system-ui, sans-serif;
+  font-size: 20px;
+  color: var(--muted);
+}
+.entry[open] summary::after { content: '−'; }
+.entry summary .n { color: var(--muted); font-variant-numeric: tabular-nums; }
+.entry summary:hover .t { color: var(--accent); }
+.entry summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.entry-body { padding: 0 0 16px 3.2em; font-size: 15.5px; }
+.entry-body > :first-child { margin-top: 0; }
+.entry-body ul { padding-left: 1.1em; }
+
+/* While reading, the signs on the wall step aside. */
+body.is-reading .exit-sign { opacity: 0; pointer-events: none; }
+
+@media (max-width: 720px) {
+  .sheet { grid-template-columns: 1fr; grid-template-rows: auto auto minmax(0, 1fr); }
+  .sheet-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 2px;
+    padding: 0 20px 10px;
+    border-right: 0;
+    border-bottom: 1.5px solid rgb(28 26 24 / 0.2);
+  }
+  .sheet-nav button { flex: none; margin-left: 0; padding: 6px 10px; font-size: 15px; }
+  .sheet-nav button[aria-current='true']::before { top: auto; bottom: -10px; left: 10px; right: 10px; width: auto; height: 3px; }
+  .sheet-page { padding: 16px 20px 48px; }
+  /* A wide table scrolls on its own, rather than the whole page. */
+  .sheet-page table { display: block; overflow-x: auto; font-size: 13px; }
+  .entry-body { padding-left: 0; }
+}
