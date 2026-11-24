@@ -37,7 +37,6 @@ const SETTLE_MS = 140;
 const MOVE = 1.1;
 const MOVE_MAX = 2.2;
 
-const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
 const gallery = document.querySelector('.gallery');
 const track = document.querySelector('.track');
@@ -222,7 +221,7 @@ function goTo(index) {
   const from = gallery.scrollLeft;
   const to = all[index];
   const steps = Math.abs(to - from) / Math.max(gallery.clientWidth * 0.6, 1);
-  const duration = reducedMotion.matches ? 0 : Math.min(MOVE * (1 + 0.35 * Math.max(steps - 1, 0)), MOVE_MAX) * 1000;
+  const duration = Math.min(MOVE * (1 + 0.35 * Math.max(steps - 1, 0)), MOVE_MAX) * 1000;
   gallery.style.scrollSnapType = 'none';
   const start = performance.now();
   const tick = now => {

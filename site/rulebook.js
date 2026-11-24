@@ -12,7 +12,6 @@ import { grain } from '../engine/grain.js';
 
 const MARKED = 'https://cdn.jsdelivr.net/npm/marked@12.0.2/lib/marked.esm.js';
 
-const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const LOOK_MS = 900;
 const EASE = 'cubic-bezier(0.65, 0, 0.35, 1)';
 
@@ -108,7 +107,13 @@ function show(id, rule = null) {
   page.innerHTML = section.html;
   page.scrollTop = 0;
   for (const button of nav.querySelectorAll('button')) {
-    button.setAttribute('aria-current', String(button.dataset.section === section.id));
+    const current = button.dataset.section === section.id;
+    button.setAttribute('aria-current', String(current));
+    // On a phone the sections are a strip that scrolls sideways: keep the
+    // current one in view.
+    if (current && nav.scrollWidth > nav.clientWidth) {
+      nav.scrollTo({ left: button.offsetLeft - nav.offsetLeft - 20, behavior: 'smooth' });
+    }
   }
   linkRules();
   if (rule) openRule(rule);
@@ -144,7 +149,7 @@ function openRule(n) {
   }
   entry.open = true;
   // Scroll the page alone: scrollIntoView would also nudge the guide itself.
-  page.scrollTo({ top: entry.offsetTop - 12, behavior: reducedMotion.matches ? 'auto' : 'smooth' });
+  page.scrollTo({ top: entry.offsetTop - 12, behavior: 'smooth' });
   entry.querySelector('summary').focus({ preventScroll: true });
 }
 
@@ -220,7 +225,7 @@ export async function open(section = 'about') {
   for (const el of scenery()) el.inert = true;
   document.body.classList.add('is-reading');
 
-  const motion = reducedMotion.matches ? 0 : LOOK_MS;
+  const motion = LOOK_MS;
   tuck = sheetTuck();
   ground.animate([{ transform: `translateY(${lift}px)` }, { transform: 'none' }], { duration: motion, easing: EASE });
   sheet.animate([{ transform: `translateY(${tuck}px)` }, { transform: 'none' }], { duration: motion, easing: EASE });
@@ -241,7 +246,7 @@ export function close() {
   if (!isOpen) return;
   isOpen = false;
   document.body.classList.remove('is-reading');
-  const motion = reducedMotion.matches ? 0 : LOOK_MS;
+  const motion = LOOK_MS;
 
   const done = ground.animate([{ transform: 'none' }, { transform: `translateY(${lift}px)` }], { duration: motion, easing: EASE, fill: 'forwards' });
   const tucked = sheet.animate([{ transform: 'none' }, { transform: `translateY(${tuck}px)` }], { duration: motion, easing: EASE, fill: 'forwards' });

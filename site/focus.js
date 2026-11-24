@@ -9,7 +9,6 @@
 import { DETAILS, ARTISTS, RULE_TITLES, SETTLED, GUIDE_NUMBER } from './paintings.js';
 import { createAnimation } from '../engine/motion.js';
 
-const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const FLY_MS = 850;
 const EASE = 'cubic-bezier(0.65, 0, 0.35, 1)'; // eases out of rest, brakes into it
 
@@ -61,7 +60,6 @@ function createPlayer(animation, onProgress) {
 
   function play(from = progress >= 1 ? 0 : progress) {
     stop();
-    if (reducedMotion.matches) return show(1);
     const start = performance.now() - from * length * 1000;
     const tick = now => {
       const p = (now - start) / (length * 1000);
@@ -525,7 +523,7 @@ export function open(piece, { instant = false } = {}) {
   // It arrives finished, as it hung on the wall: replaying it would mean it
   // vanishing first, which is just the pop-in rule 3.7 forbids.
   const done = () => backButton.focus({ preventScroll: true });
-  if (instant || reducedMotion.matches) return done();
+  if (instant) return done();
 
   const to = stage.getBoundingClientRect();
   stage.animate([
@@ -561,8 +559,6 @@ export function close() {
   view.classList.remove('is-open');
   document.body.classList.remove('is-focused');
   wall.inert = false;
-  if (reducedMotion.matches) return finish();
-
   const from = stage.getBoundingClientRect();
   const to = piece.frame.getBoundingClientRect();
   stage.animate([

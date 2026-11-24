@@ -322,9 +322,6 @@ body {
   color: var(--muted);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .frame, .next span, .replay { transition: none; }
-}
 
 /* On a phone the painting fills the width, leaving no wall beside it for the
    label. */
@@ -371,9 +368,6 @@ body {
 
 .back svg { width: 22px; height: 22px; }
 
-@media (prefers-reduced-motion: reduce) {
-  .exit-sign { transition: none; }
-}
 
 /* ------------------------------------------------------------------------- */
 /* The focused view */
@@ -825,9 +819,6 @@ body.is-focused .gallery { overflow: hidden; }
   .focus .back { position: absolute; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .bay, .intro, .floor, .focus .back, .caption, .details, .why { transition: none !important; }
-}
 
 /* ------------------------------------------------------------------------- */
 /* The Rulebook: a printed guide on the floor. Opening it, the visitor looks
@@ -1059,11 +1050,14 @@ body.is-reading .exit-sign { opacity: 0; pointer-events: none; }
   .sheet-nav {
     flex-direction: row;
     overflow-x: auto;
+    /* Swipe to scroll; no scrollbar to clash with the current-section bar. */
+    scrollbar-width: none;
     gap: 2px;
     padding: 0 20px 10px;
     border-right: 0;
     border-bottom: 1.5px solid rgb(28 26 24 / 0.2);
   }
+  .sheet-nav::-webkit-scrollbar { display: none; }
   .sheet-nav button { flex: none; margin-left: 0; padding: 6px 10px; font-size: 15px; }
   .sheet-nav button[aria-current='true']::before { top: auto; bottom: -10px; left: 10px; right: 10px; width: auto; height: 3px; }
   .sheet-page { padding: 16px 20px 48px; }

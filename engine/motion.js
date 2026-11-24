@@ -1051,8 +1051,6 @@ export function createAnimation({ viewBox, planes, lines, entrances, lineTiming 
   // Plays the animation, starting `from` seconds in. Restarting cancels any run
   // in progress. `onFrame(time)` is called after every frame drawn.
   function play({ from = 0, onFrame = () => {} } = {}) {
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) from = duration;
-
     seek(from);
     onFrame(from);
     if (from >= duration) return;
